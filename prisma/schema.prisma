@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  website    String?
+  industry   String?
+  hqLocation String?
+  createdAt  DateTime @default(now())
+  reviews    Review[]
+}
+
+model Candidate {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String?
+  displayName  String
+  createdAt    DateTime       @default(now())
+  reviews      Review[]
+  reports      ReviewReport[]
+}
+
+model Review {
+  id                 String         @id @default(cuid())
+  companyId          String
+  candidateId        String
+  overall            Float
+  communication      Int
+  timeliness         Int
+  interviewQuality   Int
+  processClarity     Int
+  professionalism    Int
+  roleTitle          String
+  /// applied | screened | interviewed | final_round | offered (see src/lib/scoring.ts)
+  stageReached       String
+  /// hired | declined | rejected | withdrew | ghosted (see src/lib/scoring.ts)
+  ending             String
+  processLengthWeeks Int?
+  takeHomeAssigned   Boolean        @default(false)
+  wouldApplyAgain    Boolean
+  body               String
+  /// Set on Imported reviews: the public account this review summarizes.
+  sourceUrl          String?
+  sourceName         String?
+  createdAt          DateTime       @default(now())
+  company            Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  candidate          Candidate      @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  reports            ReviewReport[]
+
+  @@unique([candidateId, companyId])
+  @@index([companyId, createdAt])
+  @@index([createdAt])
+}
+
+model ReviewReport {
+  id          String    @id @default(cuid())
+  reviewId    String
+  candidateId String
+  reason      String
+  createdAt   DateTime  @default(now())
+  review      Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, candidateId])
+}
